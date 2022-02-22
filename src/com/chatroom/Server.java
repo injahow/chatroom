@@ -24,24 +24,26 @@ public class Server {
     private static final HashMap<String, ArrayList<Server>> connectMap = new HashMap<String, ArrayList<Server>>();
 
     @OnOpen
-    public void start(Session session, @PathParam("id")String id) throws Exception {
-        if(id == null) return;
+    public void start(Session session, @PathParam("id") String id) throws Exception {
+        if (id == null)
+            return;
         this.session = session;
         DaoUser daoUser = new DaoUser();
         User user = daoUser.getUserInfo(id);
-        if(user == null) return;
+        if (user == null)
+            return;
         this.name = user.getName();
         this.account = user.getAccount();
         this.uid = user.getId();
         daoUser.userStart(uid);
-        ArrayList<Server> newList = (ArrayList)connectMap.get(account);
-        boolean is_null=newList==null?true:false;
-        if(is_null){
-            newList=new ArrayList<Server>();
+        ArrayList<Server> newList = (ArrayList) connectMap.get(account);
+        boolean is_null = newList == null;
+        if (is_null) {
+            newList = new ArrayList<Server>();
         }
         newList.add(this);
         connectMap.put(account, newList);
-        if(is_null||newList.size()==1){
+        if (is_null || newList.size() == 1) {
             String message = String.format("[%s %s]", name, "加入聊天室！");
             sendMessageAll(message);
         }
@@ -50,16 +52,16 @@ public class Server {
     @OnClose
     public void end() throws Exception {
         ArrayList<Server> newList = connectMap.get(account);
-        boolean isLast = newList.size()==1?true:false;
+        boolean isLast = newList.size() == 1;
         int del_i = 0;
-        for(int i=0;i<newList.size();i++){
-            if (newList.get(i).session==session) {
-                del_i=i;
+        for (int i = 0; i < newList.size(); i++) {
+            if (newList.get(i).session == session) {
+                del_i = i;
                 break;
             }
         }
         newList.remove(del_i);
-        if(isLast){
+        if (isLast) {
             String message = String.format("[%s %s]", name, "离开聊天室！");
             sendMessageAll(message);
             DaoUser daoUser = new DaoUser();
@@ -74,15 +76,16 @@ public class Server {
         String tarUser = data_arr[1];
         String msg = data_arr[2];
         // 服务端处理敏感词
-        String[] blacklist ={"kill", "杀", "die", "死", "document"};
+        String[] blacklist = { "kill", "杀", "die", "死", "document" };
         for (int i = 0; i < blacklist.length; i++) {
-            msg = msg.replace( blacklist[i],"*" );;
+            msg = msg.replace(blacklist[i], "*");
+            ;
         }
-        //from&&to
+        // from&&to
         if (!tarUser.equals("0")) {
             sendMessageTo(tarUser, "【" + name + "】:<br>" + msg);
-        }else{
-            String from_name = from.equals("0")?"匿名"+uid:name;
+        } else {
+            String from_name = from.equals("0") ? "匿名" + uid : name;
             sendMessageAll("【" + from_name + "】:<br>" + msg);
         }
     }
@@ -96,17 +99,17 @@ public class Server {
      * 私聊
      */
     private void sendMessageTo(String tarUserAccount, String msg) throws IOException {
-        Server client=null;
-        //目标用户
-        ArrayList<Server> tarUserServerList=null;
+        Server client = null;
+        // 目标用户
+        ArrayList<Server> tarUserServerList = null;
         tarUserServerList = connectMap.get(tarUserAccount);
 
         // from && msg
-        if(tarUserAccount!=account){
+        if (tarUserAccount != account) {
             session.getBasicRemote().sendText(tarUserAccount + "&&" + msg);
         }
         if (tarUserServerList == null) {
-            session.getBasicRemote().sendText(tarUserAccount + "用户 "+tarUserAccount+" 不在线");
+            session.getBasicRemote().sendText(tarUserAccount + "用户 " + tarUserAccount + " 不在线");
         } else {
             for (int i = 0; i < tarUserServerList.size(); i++) {
                 Session tarUserSession = tarUserServerList.get(i).session;
@@ -117,6 +120,7 @@ public class Server {
 
     /**
      * 消息群发
+     * 
      * @param msg
      */
     public void sendMessageAll(String msg) {
@@ -124,9 +128,9 @@ public class Server {
         Server client = null;
         for (String _account : connectMap.keySet()) {
             try {
-                ArrayList<Server> clientList = (ArrayList)connectMap.get(_account);
+                ArrayList<Server> clientList = (ArrayList) connectMap.get(_account);
                 for (int i = 0; i < clientList.size(); i++) {
-                    client = (Server)clientList.get(i);
+                    client = (Server) clientList.get(i);
                     synchronized (client) {
                         // 发送消息
                         client.session.getBasicRemote().sendText(msg);
